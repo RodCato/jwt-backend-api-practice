@@ -8,10 +8,29 @@
 require 'rest-client'
 require 'json'
 
-user1 = User.where(email: "test1@example.com").first_or_create(password: "password", password_confirmation: "password")
-user2 = User.where(email: "test2@example.com").first_or_create(password: "password", password_confirmation: "password")
+def api_key
+  ENV["API_KEY"]
+end
 
-response = RestClient.get('https://api.rawg.io/api/games', params: { key: '5d37a51f335c471490ba1b0276d510f8' })
+def games_dataset
+  api_data = { key: api_key }
+  games = RestClient.get("https://api.rawg.io/api/games?key=#{api_data[:key]}")
+  games_array = JSON.parse(games)["results"]
 
-# Parse the response as JSON
-data = JSON.parse(response.body)
+  user1 = User.where(email: "test1@example.com").first_or_create(password: "password", password_confirmation: "password")
+  user2 = User.where(email: "test2@example.com").first_or_create(password: "password", password_confirmation: "password")
+
+  games_array.each do |g|
+    user = [user1, user2].sample
+    Game.create(
+      title: g["name"],
+      genre: g["genres"][0]["name"],
+      platform: g["platforms"][0]["platform"]["name"],
+      image: g["background_image"],
+      user_id: user.id
+    )
+  end
+end
+
+games_dataset()
+puts "Seeding Games Data"
